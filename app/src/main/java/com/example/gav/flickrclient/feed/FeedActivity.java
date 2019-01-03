@@ -3,14 +3,15 @@ package com.example.gav.flickrclient.feed;
 import android.graphics.Point;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.view.Display;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.example.gav.flickrclient.App;
@@ -47,8 +48,9 @@ public class FeedActivity extends AppCompatActivity {
 
     private static final int LAYOUT = R.layout.activity_main;
     private TextView tvText;
-    private FrameLayout fl;
+    private CoordinatorLayout cl;
     private RecyclerView rvPhotos;
+    private Toolbar appToolbar;
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -66,10 +68,13 @@ public class FeedActivity extends AppCompatActivity {
 
     private void initViews() {
       //tvText = findViewById(R.id.tvText);
-        fl = findViewById(R.id.fl);
+        cl = findViewById(R.id.cl);
         rvPhotos = findViewById(R.id.rvPhotos);
+        appToolbar = findViewById(R.id.appToolbar);
         GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
         rvPhotos.setLayoutManager(gridLayoutManager);
+
+        setSupportActionBar(appToolbar);
     }
 
     private void getPhotosViaRetrofit() {
@@ -100,7 +105,7 @@ public class FeedActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(retrofit2.Call<Result> call, Throwable t) {
                         Snackbar
-                                .make(fl, getString(R.string.repeat_text), Snackbar.LENGTH_INDEFINITE)
+                                .make(cl, getString(R.string.repeat_text), Snackbar.LENGTH_INDEFINITE)
                                 .setAction("gav", new View.OnClickListener() {
                                     @Override
                                     public void onClick(View view) {

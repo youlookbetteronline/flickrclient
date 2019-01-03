@@ -1,12 +1,13 @@
 package com.example.gav.flickrclient.feed;
 
-import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.gav.flickrclient.R;
 import com.example.gav.flickrclient.model.PhotoItem;
@@ -26,12 +27,17 @@ class FeedViewHolder extends RecyclerView.ViewHolder {
                 photoItem.getId(),
                 photoItem.getSecret()
         );
-        ivPhoto.getLayoutParams().width = imageWidth;
-        ivPhoto.getLayoutParams().height = imageWidth;
+        ivPhoto.getLayoutParams().width = imageWidth - ivPhoto.getPaddingLeft();
+        ivPhoto.getLayoutParams().height = imageWidth - ivPhoto.getPaddingTop();
+        int position = getAdapterPosition();
+        int defaultPadding = (int) itemView.getContext().getResources().getDimension(R.dimen.item_padding);
+        int paddingLeft = (position % 2 == 0)?defaultPadding:0;
+        ivPhoto.setPadding(paddingLeft, defaultPadding, defaultPadding, 0);
         ivPhoto.requestLayout();
 
         RequestOptions options = new RequestOptions();
-        options.centerCrop();
+//        options.centerCrop();
+        options.transforms(new CenterCrop(), new RoundedCorners(32));
 
         Glide.with(ivPhoto)
                 .load(url)

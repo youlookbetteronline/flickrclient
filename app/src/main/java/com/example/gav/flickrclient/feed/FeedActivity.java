@@ -1,5 +1,6 @@
 package com.example.gav.flickrclient.feed;
 
+import android.content.Intent;
 import android.graphics.Point;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,6 +14,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Display;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.gav.flickrclient.App;
 import com.example.gav.flickrclient.R;
@@ -84,7 +86,7 @@ public class FeedActivity extends AppCompatActivity {
     }
 
     private void makeCall() {
-        callConnection.enqueue(
+        callConnection.clone().enqueue(
                 new retrofit2.Callback<Result>() {
                     @Override
                     public void onResponse(retrofit2.Call<Result> call, retrofit2.Response<Result> response) {
@@ -98,7 +100,18 @@ public class FeedActivity extends AppCompatActivity {
                         display.getSize(size);
                         int imageWidth = size.x/2;
 
-                        FeedAdapter adapter = new FeedAdapter(photos, imageWidth);
+                        FeedAdapter adapter = new FeedAdapter(photos, imageWidth, photoItem -> {
+                            String url = String.format(
+                                    "https://farm%s.staticflickr.com/%s/%s_%s.jpg",
+                                    photoItem.getFarm(),
+                                    photoItem.getServer(),
+                                    photoItem.getId(),
+                                    photoItem.getSecret()
+                            );
+                            Intent intent = new Intent(FeedActivity.this, PhotoActivity.class);
+                            intent.putExtra("url", url);
+                            startActivity(intent);
+                        });
                         rvPhotos.setAdapter(adapter);
                     }
 
@@ -106,7 +119,7 @@ public class FeedActivity extends AppCompatActivity {
                     public void onFailure(retrofit2.Call<Result> call, Throwable t) {
                         Snackbar
                                 .make(cl, getString(R.string.repeat_text), Snackbar.LENGTH_INDEFINITE)
-                                .setAction("gav", new View.OnClickListener() {
+                                .setAction("Ok", new View.OnClickListener() {
                                     @Override
                                     public void onClick(View view) {
                                         makeCall();
@@ -232,5 +245,9 @@ public class FeedActivity extends AppCompatActivity {
         StringWriter writer = new StringWriter();
         while(-1 != (n = reader.read(buffer))) writer.write(buffer, 0, n);
         return writer.toString();
+    }
+
+    public interface OnFeedClickListener {
+        void onFeedClick(PhotoItem photoItem);
     }
 }

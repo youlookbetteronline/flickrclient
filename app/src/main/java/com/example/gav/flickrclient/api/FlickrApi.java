@@ -2,6 +2,8 @@ package com.example.gav.flickrclient.api;
 
 import com.example.gav.flickrclient.model.Result;
 
+
+import io.reactivex.Observable;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 
@@ -10,7 +12,7 @@ public interface FlickrApi {
     String SECRET = "36760937264341e9";
 
     @GET("services/rest/")
-    retrofit2.Call<Result> listRepos(
+    Observable<Result> listRepos(
             @Query("method") String method,
             @Query("api_key") String apiKey,
             @Query("format") String format,

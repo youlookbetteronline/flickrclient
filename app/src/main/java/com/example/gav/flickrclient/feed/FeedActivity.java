@@ -21,6 +21,7 @@ import com.example.gav.flickrclient.R;
 import com.example.gav.flickrclient.api.FlickrApi;
 import com.example.gav.flickrclient.model.PhotoItem;
 import com.example.gav.flickrclient.model.Result;
+import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.gson.Gson;
 
 import org.json.JSONException;
@@ -37,6 +38,10 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import io.reactivex.Scheduler;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
@@ -58,6 +63,8 @@ public class FeedActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable displayResult;
     private retrofit2.Call<Result> callConnection;
+
+    private Disposable disposable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,8 +88,38 @@ public class FeedActivity extends AppCompatActivity {
 
     private void getPhotosViaRetrofit() {
         FlickrApi flickrApi = App.getApp(this).getFlickrApi();
-        callConnection = flickrApi.listRepos("flickr.photos.getRecent", API_KEY, "json", 1);
-        makeCall();
+        disposable = flickrApi.listRepos("flickr.photos.getRecent", API_KEY, "json", 1)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(result -> {
+                    List<PhotoItem> photos = result.getPhotos().getPhoto();
+                    Display display = getWindowManager().getDefaultDisplay();
+                    Point size = new Point();
+                    display.getSize(size);
+                    int imageWidth = size.x / 2;
+
+                    FeedAdapter adapter = new FeedAdapter(photos, imageWidth, photoItem -> {
+                        String url = String.format(
+                                "https://farm%s.staticflickr.com/%s/%s_%s.jpg",
+                                photoItem.getFarm(),
+                                photoItem.getServer(),
+                                photoItem.getId(),
+                                photoItem.getSecret()
+                        );
+                        Intent intent = new Intent(FeedActivity.this, PhotoActivity.class);
+                        intent.putExtra("url", url);
+                        startActivity(intent);
+                    });
+                    rvPhotos.setAdapter(adapter);
+                }, error -> Snackbar
+                        .make(cl, getString(R.string.repeat_text), Snackbar.LENGTH_INDEFINITE)
+                        .setAction("Ok", view -> {
+                            if (disposable != null) {
+                                disposable.dispose();
+                            }
+                            getPhotosViaRetrofit();
+                        }).show());
+        //makeCall();
     }
 
     private void makeCall() {
@@ -90,41 +127,12 @@ public class FeedActivity extends AppCompatActivity {
                 new retrofit2.Callback<Result>() {
                     @Override
                     public void onResponse(retrofit2.Call<Result> call, retrofit2.Response<Result> response) {
-                        /*StringBuilder builder = new StringBuilder();
-                        for (int i = 0; i < response.body().getPhotos().getPhoto().size() && i < 3; i++) {
-                            builder.append(response.body().getPhotos().getPhoto().get(i).getTitle());
-                        }*/
-                        List<PhotoItem> photos = response.body().getPhotos().getPhoto();
-                        Display display = getWindowManager().getDefaultDisplay();
-                        Point size = new Point();
-                        display.getSize(size);
-                        int imageWidth = size.x/2;
 
-                        FeedAdapter adapter = new FeedAdapter(photos, imageWidth, photoItem -> {
-                            String url = String.format(
-                                    "https://farm%s.staticflickr.com/%s/%s_%s.jpg",
-                                    photoItem.getFarm(),
-                                    photoItem.getServer(),
-                                    photoItem.getId(),
-                                    photoItem.getSecret()
-                            );
-                            Intent intent = new Intent(FeedActivity.this, PhotoActivity.class);
-                            intent.putExtra("url", url);
-                            startActivity(intent);
-                        });
-                        rvPhotos.setAdapter(adapter);
                     }
 
                     @Override
                     public void onFailure(retrofit2.Call<Result> call, Throwable t) {
-                        Snackbar
-                                .make(cl, getString(R.string.repeat_text), Snackbar.LENGTH_INDEFINITE)
-                                .setAction("Ok", new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        makeCall();
-                                    }
-                                }).show();
+
                     }
                 }
         );
@@ -233,8 +241,8 @@ public class FeedActivity extends AppCompatActivity {
             handler.removeCallbacks(displayResult);
         }
 
-        if (callConnection != null) {
-            callConnection.cancel();
+        if (disposable != null) {
+            disposable.dispose();
         }
     }
 
